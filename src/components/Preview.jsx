@@ -21,6 +21,50 @@ const PFP_SIZE = 1080
 const CARD_WIDTH = 1080
 const CARD_HEIGHT = 1350
 
+function drawStripedBorderCanvas(ctx, width, height, scaleX) {
+  const borderWidth = Math.max(10, Math.round(14 * scaleX))
+
+  const patternCanvas = document.createElement('canvas')
+  const pSize = 36
+  patternCanvas.width = pSize
+  patternCanvas.height = pSize
+  const pCtx = patternCanvas.getContext('2d')
+
+  pCtx.fillStyle = '#1a5c2a'
+  pCtx.fillRect(0, 0, pSize, pSize)
+
+  const step = pSize / 3
+  for (let offset = -pSize * 2; offset < pSize * 2; offset += step * 3) {
+    pCtx.fillStyle = '#e84393'
+    pCtx.beginPath()
+    pCtx.moveTo(offset, 0)
+    pCtx.lineTo(offset + step, 0)
+    pCtx.lineTo(offset + step + pSize, pSize)
+    pCtx.lineTo(offset + pSize, pSize)
+    pCtx.closePath()
+    pCtx.fill()
+
+    pCtx.fillStyle = '#e8d44d'
+    pCtx.beginPath()
+    pCtx.moveTo(offset + step, 0)
+    pCtx.lineTo(offset + step * 2, 0)
+    pCtx.lineTo(offset + step * 2 + pSize, pSize)
+    pCtx.lineTo(offset + step + pSize, pSize)
+    pCtx.closePath()
+    pCtx.fill()
+  }
+
+  const pattern = ctx.createPattern(patternCanvas, 'repeat')
+
+  ctx.save()
+  ctx.lineWidth = borderWidth * 2
+  ctx.strokeStyle = pattern
+  ctx.beginPath()
+  ctx.roundRect(0, 0, width, height, 16 * scaleX)
+  ctx.stroke()
+  ctx.restore()
+}
+
 function drawPFPFrame(ctx, img) {
   const size = PFP_SIZE
   ctx.canvas.width = size
@@ -49,13 +93,9 @@ function drawPFPFrame(ctx, img) {
   }
 
   // Draw photo in circle
-  ctx.save()
-  ctx.beginPath()
-  ctx.arc(size / 2, size / 2, photoSize / 2, 0, Math.PI * 2)
-  ctx.closePath()
-  ctx.clip()
+  ctx.clearRect(0, 0, size, size)
 
-  // Cover-fit the image
+  // 1. User photo (cover-fit into full square canvas)
   const imgAspect = img.width / img.height
   let sx, sy, sw, sh
   if (imgAspect > 1) {
@@ -69,35 +109,30 @@ function drawPFPFrame(ctx, img) {
     sx = 0
     sy = (img.height - sh) / 2
   }
-  ctx.drawImage(img, sx, sy, sw, sh, photoX, photoY, photoSize, photoSize)
-  ctx.restore()
 
-  // Circle border
-  ctx.beginPath()
-  ctx.arc(size / 2, size / 2, photoSize / 2, 0, Math.PI * 2)
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, size, size)
+
+  // 2. Overlay gradient at bottom for text contrast
+  const grad = ctx.createLinearGradient(0, size - 300, 0, size)
+  grad.addColorStop(0, 'rgba(0, 0, 0, 0)')
+  grad.addColorStop(0.6, 'rgba(0, 95, 50, 0.85)')
+  grad.addColorStop(1, 'rgba(0, 95, 50, 0.98)')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, size - 300, size, 300)
+
+  // 3. Decorative Frame Elements
+  const inset = 40
   ctx.strokeStyle = '#e8d44d'
-  ctx.lineWidth = 8
-  ctx.stroke()
+  ctx.lineWidth = 12
+  ctx.strokeRect(inset, inset, size - inset * 2, size - inset * 2)
 
-  // Outer decorative ring
-  ctx.beginPath()
-  ctx.arc(size / 2, size / 2, photoSize / 2 + 16, 0, Math.PI * 2)
-  ctx.strokeStyle = 'rgba(232, 212, 77, 0.3)'
+  // Inner thin border
+  ctx.strokeStyle = '#005f32'
   ctx.lineWidth = 3
-  ctx.stroke()
+  ctx.strokeRect(inset + 10, inset + 10, size - (inset + 10) * 2, size - (inset + 10) * 2)
 
-  // Bottom banner
-  const bannerH = 120
-  const bannerY = size - bannerH - 40
-  ctx.fillStyle = '#0d3318'
-  ctx.beginPath()
-  ctx.roundRect(60, bannerY, size - 120, bannerH, 16)
-  ctx.fill()
-  ctx.strokeStyle = '#e8d44d'
-  ctx.lineWidth = 3
-  ctx.stroke()
-
-  // Banner text
+  // Banner text at bottom
+  const bannerY = size - 160
   ctx.fillStyle = '#e8d44d'
   ctx.font = 'bold 32px "Space Mono", monospace'
   ctx.textAlign = 'center'
@@ -107,208 +142,126 @@ function drawPFPFrame(ctx, img) {
   ctx.font = '22px "Space Mono", monospace'
   ctx.fillText('GOA 2026', size / 2, bannerY + 80)
 
-  // Corner accents
-  const accentSize = 30
-  ctx.strokeStyle = '#e84393'
-  ctx.lineWidth = 4
-
-  // Top-left
-  ctx.beginPath()
-  ctx.moveTo(30, 30 + accentSize)
-  ctx.lineTo(30, 30)
-  ctx.lineTo(30 + accentSize, 30)
-  ctx.stroke()
-
-  // Top-right
-  ctx.beginPath()
-  ctx.moveTo(size - 30 - accentSize, 30)
-  ctx.lineTo(size - 30, 30)
-  ctx.lineTo(size - 30, 30 + accentSize)
-  ctx.stroke()
-
-  // Bottom-left
-  ctx.beginPath()
-  ctx.moveTo(30, size - 30 - accentSize)
-  ctx.lineTo(30, size - 30)
-  ctx.lineTo(30 + accentSize, size - 30)
-  ctx.stroke()
-
-  // Bottom-right
-  ctx.beginPath()
-  ctx.moveTo(size - 30 - accentSize, size - 30)
-  ctx.lineTo(size - 30, size - 30)
-  ctx.lineTo(size - 30, size - 30 - accentSize)
-  ctx.stroke()
-
-  // Small dots pattern top-right
-  ctx.fillStyle = 'rgba(232, 212, 77, 0.15)'
-  for (let i = 0; i < 8; i++) {
-    for (let j = 0; j < 4; j++) {
-      ctx.fillRect(size - 200 + i * 12, 60 + j * 12, 4, 4)
-    }
-  }
+  // Draw 4-sided uniform striped border onto Canvas
+  drawStripedBorderCanvas(ctx, size, size, 1)
 }
 
-function drawBuilderCard(ctx, img, name, stack, builderTitle) {
-  ctx.canvas.width = CARD_WIDTH
-  ctx.canvas.height = CARD_HEIGHT
+function drawBuilderCard(ctx, img, frameImg, name, stack, builderTitle) {
+  const width = frameImg.naturalWidth || frameImg.width || 1080
+  const height = frameImg.naturalHeight || frameImg.height || 1350
 
-  // Background
-  const bgGrad = ctx.createLinearGradient(0, 0, 0, CARD_HEIGHT)
-  bgGrad.addColorStop(0, '#fdf6e3')
-  bgGrad.addColorStop(1, '#f5e8c0')
-  ctx.fillStyle = bgGrad
-  ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT)
+  ctx.canvas.width = width
+  ctx.canvas.height = height
 
-  // Subtle dot pattern
-  ctx.fillStyle = 'rgba(26, 92, 42, 0.04)'
-  for (let x = 0; x < CARD_WIDTH; x += 20) {
-    for (let y = 0; y < CARD_HEIGHT; y += 20) {
-      ctx.fillRect(x, y, 3, 3)
-    }
-  }
+  ctx.clearRect(0, 0, width, height)
 
-  // Card background
-  const cardMargin = 60
-  const cardW = CARD_WIDTH - cardMargin * 2
-  const cardH = CARD_HEIGHT - cardMargin * 2
-  const cardX = cardMargin
-  const cardY = cardMargin
+  // 1. Draw base frame id.png
+  ctx.drawImage(frameImg, 0, 0, width, height)
 
-  // Card shadow
-  ctx.shadowColor = 'rgba(0,0,0,0.15)'
-  ctx.shadowBlur = 30
-  ctx.shadowOffsetY = 10
+  const scaleX = width / 1080
+  const scaleY = height / 1350
 
-  // Card shape
-  ctx.fillStyle = '#ffffff'
-  ctx.beginPath()
-  ctx.roundRect(cardX, cardY, cardW, cardH, 24)
-  ctx.fill()
+  // 2. Draw Profile Photo with exact aspect ratio cover-fit (no stretching)
+  const photoW = 340 * scaleX
+  const photoH = 410 * scaleY
+  const photoX = (width - photoW) / 2
+  const photoY = 320 * scaleY
+  const borderRadius = 18 * scaleX
 
-  ctx.shadowColor = 'transparent'
-  ctx.shadowBlur = 0
-  ctx.shadowOffsetY = 0
-
-  // Top green bar
-  const barH = 100
-  ctx.fillStyle = '#1a5c2a'
-  ctx.beginPath()
-  ctx.roundRect(cardX, cardY, cardW, barH, [24, 24, 0, 0])
-  ctx.fill()
-
-  // Top bar text
-  ctx.fillStyle = '#e8d44d'
-  ctx.font = 'bold 36px "Space Mono", monospace'
-  ctx.textAlign = 'center'
-  ctx.fillText('HACKER HOUSE', CARD_WIDTH / 2, cardY + 45)
-  ctx.fillStyle = 'rgba(232, 212, 77, 0.8)'
-  ctx.font = '20px "Space Mono", monospace'
-  ctx.fillText('GOA 2026 • BUILDER PASS', CARD_WIDTH / 2, cardY + 78)
-
-  // Photo area - circle
-  const photoRadius = 160
-  const photoCenterX = CARD_WIDTH / 2
-  const photoCenterY = cardY + barH + 50 + photoRadius
-
-  ctx.save()
-  ctx.beginPath()
-  ctx.arc(photoCenterX, photoCenterY, photoRadius, 0, Math.PI * 2)
-  ctx.closePath()
-  ctx.clip()
-
-  // Cover-fit
+  const targetAspect = photoW / photoH
   const imgAspect = img.width / img.height
   let sx, sy, sw, sh
-  if (imgAspect > 1) {
+  if (imgAspect > targetAspect) {
     sh = img.height
-    sw = img.height
+    sw = img.height * targetAspect
     sx = (img.width - sw) / 2
     sy = 0
   } else {
     sw = img.width
-    sh = img.width
+    sh = img.width / targetAspect
     sx = 0
     sy = (img.height - sh) / 2
   }
-  ctx.drawImage(img, sx, sy, sw, sh, photoCenterX - photoRadius, photoCenterY - photoRadius, photoRadius * 2, photoRadius * 2)
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.roundRect(photoX, photoY, photoW, photoH, borderRadius)
+  ctx.closePath()
+  ctx.clip()
+  ctx.drawImage(img, sx, sy, sw, sh, photoX, photoY, photoW, photoH)
   ctx.restore()
 
-  // Photo border
+  // Photo border stroke
   ctx.beginPath()
-  ctx.arc(photoCenterX, photoCenterY, photoRadius, 0, Math.PI * 2)
-  ctx.strokeStyle = '#1a5c2a'
-  ctx.lineWidth = 6
+  ctx.roundRect(photoX, photoY, photoW, photoH, borderRadius)
+  ctx.strokeStyle = 'rgba(232, 212, 77, 0.8)'
+  ctx.lineWidth = 3.5 * scaleX
   ctx.stroke()
 
-  // Outer ring
-  ctx.beginPath()
-  ctx.arc(photoCenterX, photoCenterY, photoRadius + 8, 0, Math.PI * 2)
-  ctx.strokeStyle = '#e8d44d'
-  ctx.lineWidth = 3
-  ctx.stroke()
+  // 3. Draw Name next to NAME: line (Bigger, resting right on line)
+  const nameX = 425 * scaleX
+  const nameY = 825 * scaleY
+  ctx.save()
+  ctx.fillStyle = '#FF0080'
+  ctx.font = `bold ${Math.round(44 * scaleX)}px "Anton", "Space Grotesk", sans-serif`
+  ctx.textAlign = 'left'
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+  ctx.shadowBlur = 4
+  ctx.shadowOffsetY = 1 * scaleY
+  ctx.fillText(name.toUpperCase(), nameX, nameY)
+  ctx.restore()
 
-  // Name
-  const nameY = photoCenterY + photoRadius + 60
-  ctx.fillStyle = '#1a5c2a'
-  ctx.font = 'bold 48px "Space Grotesk", sans-serif'
-  ctx.textAlign = 'center'
-  ctx.fillText(name.toUpperCase(), CARD_WIDTH / 2, nameY)
+  // 4. Draw Stack on ROLE: line
+  const roleX = 425 * scaleX
+  const roleY = 897 * scaleY
+  const displayStack = (stack || 'BUILDER').toUpperCase()
+  ctx.save()
+  ctx.fillStyle = '#005f32'
+  ctx.font = `900 ${Math.round(34 * scaleX)}px "Space Mono", monospace`
+  ctx.textAlign = 'left'
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.25)'
+  ctx.shadowBlur = 3
+  ctx.shadowOffsetY = 1 * scaleY
+  ctx.fillText(displayStack, roleX, roleY)
+  ctx.restore()
 
-  // Underline accent
-  const textWidth = ctx.measureText(name.toUpperCase()).width
-  ctx.strokeStyle = '#e84393'
-  ctx.lineWidth = 4
-  ctx.beginPath()
-  ctx.moveTo(CARD_WIDTH / 2 - textWidth / 2 - 10, nameY + 10)
-  ctx.lineTo(CARD_WIDTH / 2 + textWidth / 2 + 10, nameY + 10)
-  ctx.stroke()
+  // 5. Draw Assigned Builder Title at bottom of the card (Larger & Bolder)
+  if (builderTitle) {
+    const titleText = builderTitle.toUpperCase()
+    const titleY = 1282 * scaleY
+    const titleX = width / 2
 
-  // Builder title
-  ctx.fillStyle = '#e84393'
-  ctx.font = 'bold 30px "Space Mono", monospace'
-  ctx.fillText(builderTitle, CARD_WIDTH / 2, nameY + 60)
+    ctx.save()
+    ctx.textAlign = 'center'
+    ctx.font = `bold ${Math.round(40 * scaleX)}px "Anton", "Space Grotesk", sans-serif`
 
-  // Stack / Role
-  if (stack) {
-    ctx.fillStyle = '#1a5c2a'
-    ctx.font = '26px "Space Mono", monospace'
-    ctx.fillText(stack, CARD_WIDTH / 2, nameY + 110)
-  }
+    // Badge metrics & pill container
+    const metrics = ctx.measureText(titleText)
+    const paddingX = 30 * scaleX
+    const badgeW = metrics.width + paddingX * 2
+    const badgeH = 56 * scaleY
+    const badgeX = titleX - badgeW / 2
+    const badgeY = titleY - 40 * scaleY
 
-  // Bottom info bar
-  const bottomBarY = cardY + cardH - 120
-  ctx.fillStyle = '#1a5c2a'
-  ctx.beginPath()
-  ctx.roundRect(cardX + 30, bottomBarY, cardW - 60, 70, 12)
-  ctx.fill()
-
-  ctx.fillStyle = '#e8d44d'
-  ctx.font = '18px "Space Mono", monospace'
-  ctx.fillText('GOA, INDIA • 28-31 OCT 2026 • #FrameInGoa', CARD_WIDTH / 2, bottomBarY + 44)
-
-  // Decorative corner dots
-  ctx.fillStyle = '#e84393'
-  const corners = [
-    [cardX + 20, cardY + 20],
-    [cardX + cardW - 20, cardY + 20],
-    [cardX + 20, cardY + cardH - 20],
-    [cardX + cardW - 20, cardY + cardH - 20],
-  ]
-  corners.forEach(([cx, cy]) => {
+    // Draw pill badge backdrop
     ctx.beginPath()
-    ctx.arc(cx, cy, 6, 0, Math.PI * 2)
+    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 14 * scaleX)
+    ctx.fillStyle = 'rgba(0, 50, 25, 0.95)'
     ctx.fill()
-  })
+    ctx.strokeStyle = '#e8d44d'
+    ctx.lineWidth = 3.5 * scaleX
+    ctx.stroke()
 
-  // Small dot pattern decorations
-  ctx.fillStyle = 'rgba(26, 92, 42, 0.08)'
-  for (let i = 0; i < 6; i++) {
-    for (let j = 0; j < 3; j++) {
-      ctx.fillRect(cardX + 30 + i * 12, cardY + cardH - 50 + j * 12, 4, 4)
-      ctx.fillRect(cardX + cardW - 110 + i * 12, cardY + cardH - 50 + j * 12, 4, 4)
-    }
+    // Draw Title text
+    ctx.fillStyle = '#e8d44d'
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'
+    ctx.shadowBlur = 5
+    ctx.fillText(titleText, titleX, titleY)
+    ctx.restore()
   }
+
+  // 6. Draw 4-sided uniform 45deg striped border directly onto Canvas
+  drawStripedBorderCanvas(ctx, width, height, scaleX)
 }
 
 export default function Preview({ photo, name, stack, builderTitle, format, onBack, onStartOver }) {
@@ -320,19 +273,41 @@ export default function Preview({ photo, name, stack, builderTitle, format, onBa
     const canvas = canvasRef.current
     if (!canvas || !photo) return
 
+    setGenerating(true)
     const ctx = canvas.getContext('2d')
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      if (format === 'pfp') {
+
+    if (format === 'pfp') {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
         drawPFPFrame(ctx, img)
-      } else {
-        drawBuilderCard(ctx, img, name, stack, builderTitle)
+        setGenerating(false)
+        setGeneratedUrl(canvas.toDataURL('image/png'))
       }
-      setGenerating(false)
-      setGeneratedUrl(canvas.toDataURL('image/png'))
+      img.src = photo
+    } else {
+      let loadedCount = 0
+      const img = new Image()
+      const frameImg = new Image()
+
+      img.crossOrigin = 'anonymous'
+      frameImg.crossOrigin = 'anonymous'
+
+      const checkBothLoaded = () => {
+        loadedCount++
+        if (loadedCount === 2) {
+          drawBuilderCard(ctx, img, frameImg, name, stack, builderTitle)
+          setGenerating(false)
+          setGeneratedUrl(canvas.toDataURL('image/png'))
+        }
+      }
+
+      img.onload = checkBothLoaded
+      frameImg.onload = checkBothLoaded
+
+      img.src = photo
+      frameImg.src = '/id.png'
     }
-    img.src = photo
   }, [photo, format, name, stack, builderTitle])
 
   const handleDownload = useCallback(() => {
@@ -353,70 +328,61 @@ export default function Preview({ photo, name, stack, builderTitle, format, onBa
   }, [format])
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-hh-green-dark via-hh-green to-hh-green-light relative overflow-hidden">
-      <div className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `radial-gradient(circle, #e8d44d 1px, transparent 1px)`,
-          backgroundSize: '20px 20px',
-        }}
-      />
-
-      <div className="relative z-10 max-w-lg mx-auto px-4 py-8 sm:py-12">
-        <div className="flex items-center justify-between mb-6">
-          <button onClick={onBack} className="text-hh-yellow/60 hover:text-hh-yellow font-mono text-sm flex items-center gap-2 cursor-pointer">
-            ← Back
-          </button>
-          <button onClick={onStartOver} className="text-hh-yellow/60 hover:text-hh-yellow font-mono text-sm cursor-pointer">
+    <div className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center p-3 animate-fadeIn">
+      <div className={`relative z-10 w-full mx-auto px-2 ${format === 'pfp' ? 'max-w-[320px] sm:max-w-[360px]' : 'max-w-xs sm:max-w-sm md:max-w-md'}`}>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-hh-yellow font-display text-lg sm:text-xl tracking-wide drop-shadow-md">
+            Your {format === 'pfp' ? 'PFP Frame' : 'Builder Pass'}
+          </h2>
+          <button onClick={onStartOver} className="text-hh-yellow/80 hover:text-hh-yellow font-mono text-[11px] uppercase tracking-wider cursor-pointer bg-black/40 px-2.5 py-1 rounded border border-hh-yellow/30">
             Start Over
           </button>
         </div>
-
-        <h2 className="text-hh-yellow font-display text-2xl sm:text-3xl font-bold mb-6 text-center">
-          Your {format === 'pfp' ? 'PFP Frame' : 'Builder Pass'}
-        </h2>
 
         {/* Canvas (hidden but rendered) */}
         <canvas ref={canvasRef} className="hidden" />
 
         {/* Preview */}
         {generating ? (
-          <div className="bg-white/5 rounded-2xl border border-hh-yellow/20 p-10 text-center">
-            <p className="text-hh-yellow font-mono text-sm animate-pulse">Generating...</p>
+          <div className="bg-black/40 rounded-2xl border border-hh-yellow/30 p-8 text-center">
+            <p className="text-hh-yellow font-mono text-sm animate-pulse">Generating pass...</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="rounded-2xl overflow-hidden border-2 border-hh-yellow/30 bg-black/20">
+          <div className="space-y-3">
+            <div className="flex items-center justify-center">
               {generatedUrl && (
                 <img
                   src={generatedUrl}
                   alt="Generated pass"
-                  className="w-full"
+                  className={`w-full object-contain rounded-2xl drop-shadow-2xl transition-all ${
+                    format === 'pfp' ? 'max-h-[250px] sm:max-h-[280px]' : 'max-h-[360px] sm:max-h-[420px] md:max-h-[460px]'
+                  }`}
                 />
               )}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-2.5 max-w-sm mx-auto">
               <button
                 onClick={handleDownload}
-                className="flex-1 bg-hh-yellow text-hh-green-dark font-mono font-bold text-sm py-3.5 rounded-xl hover:bg-hh-yellow-light transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="flex-1 bg-hh-yellow text-hh-green-dark font-display text-xs sm:text-sm py-2.5 rounded-xl hover:bg-hh-yellow-light transition-colors flex items-center justify-center gap-1.5 cursor-pointer tracking-wide shadow-lg"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Download
               </button>
               <button
                 onClick={handleShareX}
-                className="flex-1 bg-[#1d1d1f] text-white font-mono font-bold text-sm py-3.5 rounded-xl hover:bg-[#333] transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                className="flex-1 bg-[#1d1d1f] text-white font-display text-xs sm:text-sm py-2.5 rounded-xl hover:bg-[#333] transition-colors flex items-center justify-center gap-1.5 cursor-pointer tracking-wide shadow-lg"
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>
                 Share on X
               </button>
             </div>
 
-            <p className="text-hh-yellow/40 font-mono text-xs text-center mt-2">
+            <p className="text-hh-yellow/70 font-body text-[11px] text-center mt-1 drop-shadow">
               Download the image, then attach it to your tweet with #FrameInGoa
             </p>
           </div>
