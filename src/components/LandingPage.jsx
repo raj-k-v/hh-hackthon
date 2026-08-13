@@ -10,7 +10,7 @@ export default function LandingPage({ onFormatSelect }) {
         <img
           src="/2-47.svg"
           alt="2:47 PM STUDIO"
-          className="h-16 sm:h-20 w-auto object-contain select-none mt-5 sm:mt-0"
+          className="h-16 sm:h-20 w-auto object-contain select-none"
         />
 
         {/* Sliding format selection widget */}
@@ -80,7 +80,7 @@ export default function LandingPage({ onFormatSelect }) {
       </div>
 
       {/* Hero section */}
-      <div className="relative z-10 flex flex-col items-center justify-center px-4 pt-24 sm:pt-28 md:pt-32 pb-12 w-full mx-auto">
+      <div className="relative z-10 flex flex-col items-center justify-center px-4 pt-24 sm:pt-28 md:pt-32 pb-12 w-full mx-auto mt-16 sm:mt-0">
         <div className="relative w-full flex justify-center items-center px-4 select-none">
           {/* Hacker House logo */}
           <img

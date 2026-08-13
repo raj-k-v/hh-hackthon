@@ -3,6 +3,7 @@ import LandingPage from './components/LandingPage'
 import PhotoUpload from './components/PhotoUpload'
 import BuilderForm from './components/BuilderForm'
 import Preview from './components/Preview'
+import LoadingScreen from './components/LoadingScreen'
 
 const TITLES = [
   "Pixel Wizard", "Bug Whisperer", "Code Alchemist", "Stack Overlord",
@@ -25,6 +26,7 @@ function generateTitle() {
 }
 
 export default function App() {
+  const [loading, setLoading]   = useState(true)
   const [step, setStep]         = useState('landing')
   const [format, setFormat]     = useState(null) // 'card' | 'pfp'
   const [photo, setPhoto]       = useState(null)
@@ -143,9 +145,24 @@ export default function App() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-hh-green">
-      {/* FIXED BACKGROUND LAYER */}
+      {/* LOADING SCREEN */}
+      {loading && <LoadingScreen onDone={() => setLoading(false)} />}
+
+
+      {/* FIXED BACKGROUND LAYER - Mobile */}
       <div
-        className="fixed inset-0 pointer-events-none z-0"
+        className="fixed inset-0 pointer-events-none z-0 block sm:hidden"
+        style={{
+          backgroundImage: `url('/bg-mobile.png')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
+
+      {/* FIXED BACKGROUND LAYER - Desktop */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0 hidden sm:block"
         style={{
           backgroundImage: `url('/bg.png')`,
           backgroundSize: 'cover',
@@ -197,7 +214,7 @@ export default function App() {
       {/* 3. LEFT BACK ARROW (Build ID Flow ← Back) */}
       <button
         onClick={handleBack}
-        className={`fixed left-4 sm:left-8 top-1/2 -translate-y-1/2 z-30 w-12 h-12 sm:w-14 sm:h-14 rounded-full text-white shadow-xl flex items-center justify-center group cursor-pointer border-2 border-white/30 transition-all duration-500 cubic-bezier(0.77,0,0.175,1) ${
+        className={`fixed left-4 sm:left-8 top-1/4 sm:top-1/2 -translate-y-1/2 z-30 w-12 h-12 sm:w-14 sm:h-14 rounded-full text-white shadow-xl flex items-center justify-center group cursor-pointer border-2 border-white/30 transition-all duration-500 cubic-bezier(0.77,0,0.175,1) ${
           !isLanding && format === 'card'
             ? 'scale-100 opacity-100 pointer-events-auto hover:scale-110 active:scale-95'
             : 'scale-0 opacity-0 pointer-events-none'
